@@ -769,10 +769,10 @@ index=service-installation EventCode=4697
 
 ## Suspicious Indicators
 
-Source IP        : 185.199.110.77
-Hostname         : DC01
-Compromised User : backup_admin
-Service 1        : WindowsUpdateSvc
-Service 2        : SystemMonitor
-Persistence Type : Windows Service Installation
-Event IDs        : 4697, 7045
+Source IP        : 185.199.110.77  
+Hostname         : DC01  
+Compromised User : backup_admin  
+Service 1        : WindowsUpdateSvc  
+Service 2        : SystemMonitor  
+Persistence Type : Windows Service Installation  
+Event IDs        : 4697, 7045  
