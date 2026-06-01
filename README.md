@@ -640,3 +640,139 @@ index=privilege-escalation (EventCode=4672 OR EventCode=4720 OR EventCode=4732)
 ## Conclusion
 
 -The investigation identified a privilege escalation attack originating from 185.199.110.77. The attacker obtained privileged access, created a new administrative account (backup_admin),    added it to the Administrators group, and successfully logged in using the newly created account. This activity demonstrates both privilege escalation and persistence techniques commonly   observed in real-world attacks.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## 7. Service Installation Persistence Detection Using Splunk ##
+
+## Objective
+
+-Detect persistence mechanisms established through Windows service installation by identifying suspicious service creation events and correlating them with compromised user activity.
+
+## Investigation Overview
+
+-Windows authentication and service-related logs were analyzed to identify persistence techniques used by an attacker after gaining privileged access. The investigation focused on           detecting newly installed services, suspicious service names, associated user accounts, and the source IP responsible for the activity.
+
+## Investigation Queries
+
+### View Successful Logins
+```
+index=service-installation EventCode=4624
+| stats count by src_ip
+| sort - count
+```
+-Displays successful login activity by source IP.
+
+### View Failed Logins
+```
+index=service-installation EventCode=4625
+| stats count by src_ip
+| sort - count
+```
+-Displays failed login activity by source IP.
+
+### Find Suspicious Source IP
+```
+index=service-installation
+| stats count by src_ip
+| sort - count
+```
+-Displays source IPs generating activity in the environment.
+
+### Detect Installed Services
+```
+index=service-installation EventCode=4697
+```
+-Displays all service installation events.
+
+### Detect Service Creation Events
+```
+index=service-installation EventCode=7045
+```
+-Displays service creation and registration events.
+
+### Count Installed Services
+```
+index=service-installation EventCode=4697
+| stats count by service_name
+```
+-Shows installed services and their occurrence count.
+
+### Investigate Service Installation Activity
+```
+index=service-installation EventCode=4697
+| table _time actor service_name service_path src_ip hostname
+```
+-Displays details of installed services.
+
+### Investigate Suspicious Source IP
+```
+index=service-installation src_ip=185.199.110.77
+| sort _time
+```
+-Displays all activity from the suspicious source IP.
+
+### View Full Attack Timeline
+```
+index=service-installation src_ip=185.199.110.77
+| table _time EventCode actor user service_name service_path start_type src_ip hostname
+| sort _time
+```
+Displays the complete persistence attack timeline.
+
+### Investigate Compromised Account Activity
+```
+index=service-installation user=backup_admin
+```
+-Displays activity associated with the compromised account.
+
+### Main Persistence Detection Query
+```
+index=service-installation (EventCode=4697 OR EventCode=7045)
+| table _time EventCode actor service_name service_path start_type src_ip hostname
+| sort _time
+```
+-Detects newly installed services and service creation activity.
+
+### Malicious Service Detection Query
+```
+index=service-installation EventCode=4697
+| stats values(service_path) as path by service_name
+```
+- Identifies suspicious service names and executable paths.
+
+## Findings
+
+-Source IP 185.199.110.77 was identified as suspicious.  
+-User backup_admin successfully authenticated to the host.  
+-A service named WindowsUpdateSvc was installed.  
+-The service was configured for automatic startup.  
+-A second service named SystemMonitor was later installed.  
+-Service installation activity originated from the same suspicious source IP.  
+-The behavior indicates persistence establishment following privilege escalation.  
+
+## Attack Timeline
+
+10:30:00  EventCode=4624  backup_admin login
+      ↓
+10:32:00  EventCode=4697  WindowsUpdateSvc installed
+      ↓
+10:33:00  EventCode=7045  Service configured for Auto Start
+      ↓
+10:35:00  EventCode=4624  backup_admin login
+      ↓
+10:37:00  EventCode=4697  SystemMonitor service installed
+\
+## Conclusion
+
+-The investigation identified persistence activity originating from 185.199.110.77. After obtaining privileged access through the backup_admin account, the attacker installed multiple       Windows services and configured one for automatic startup. This behavior is consistent with persistence techniques used by attackers to maintain long-term access to compromised systems.
+
+## Suspicious Indicators
+
+Source IP        : 185.199.110.77
+Hostname         : DC01
+Compromised User : backup_admin
+Service 1        : WindowsUpdateSvc
+Service 2        : SystemMonitor
+Persistence Type : Windows Service Installation
+Event IDs        : 4697, 7045
