@@ -957,9 +957,9 @@ Malware Execution / Post-Exploitation
 
 -After successfully gaining access and establishing persistence on the system, attackers typically execute malicious tools and payloads to expand control over the compromised host.         Malware execution is one of the most critical stages of an attack because it allows the attacker to perform actions such as downloading additional malware, stealing credentials, moving    laterally, or preparing for data exfiltration.
 
-# In this scenario, the attacker uses the compromised account backup_admin to execute several suspicious processes commonly abused in real-world attacks:
+--In this scenario, the attacker uses the compromised account backup_admin to execute several suspicious processes commonly abused in real-world attacks:
 
-## 1. PowerShell Execution
+# 1. PowerShell Execution
 
 -The attacker launches powershell.exe with an encoded command to hide malicious activity and evade detection.
 
@@ -974,7 +974,7 @@ Download payloads
 Bypass security controls  
 Evade detection through obfuscation  
 
-## 2. Payload Download Using Certutil
+# 2. Payload Download Using Certutil
 
 -The attacker uses certutil.exe, a legitimate Windows utility, to download a malicious file from a remote server.
 
@@ -987,7 +987,7 @@ Purpose:
 Download malware from attacker-controlled infrastructure  
 Avoid using third-party tools that may trigger security alerts  
 
-## 3. Malware Execution
+# 3. Malware Execution
 
 -After downloading the payload, the attacker executes the malware.
 
@@ -1002,7 +1002,7 @@ Deploy ransomware or trojans
 Collect credentials  
 Prepare for lateral movement  
 
-## 4. DLL Execution Using Rundll32
+# 4. DLL Execution Using Rundll32
 
 -The attacker uses rundll32.exe to execute malicious DLL files.
 
@@ -1015,7 +1015,7 @@ Purpose:
 Execute malicious code through a trusted Windows binary  
 Blend malicious activity with normal system processes  
 
-## 5. HTA Execution Using Mshta
+# 5. HTA Execution Using Mshta
 
 -The attacker uses mshta.exe to execute remote HTA files.
 
